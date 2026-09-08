@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: 990787030729.dkr.ecr.ap-south-1.amazonaws.com/eks-production-platform
-  tag: "1.0.0"
+  tag: "8112b2f50f37190751e8bcde61df900716a55cf8"
   pullPolicy: Always
 
 deployment:
