@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: eks-production
+  labels:
+    app.kubernetes.io/name: eks-production
+    app.kubernetes.io/part-of: eks-production-platform
