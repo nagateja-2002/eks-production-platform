@@ -10,7 +10,7 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 env:
   AWS_REGION: ap-south-1
@@ -62,3 +62,15 @@ jobs:
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+                - name: Update Helm image tag
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          sed -i -E 's/^  tag: ".+"/  tag: "'"${GITHUB_SHA}"'"/' helm/eks-production-platform/values.yaml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add helm/eks-production-platform/values.yaml
+          git commit -m "chore: deploy image ${GITHUB_SHA} [skip ci]"
+          git push origin main
