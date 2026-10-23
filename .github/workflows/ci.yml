@@ -128,10 +128,10 @@ jobs:
       ECR_REPOSITORY: eks-production-platform
 
     steps:
-      - name: Checkout source
+      - name: Checkout source commit
         uses: actions/checkout@v7.0.1
         with:
-          ref: main
+          ref: ${{ github.sha }}
 
       - name: Check publishing configuration
         shell: bash
@@ -164,9 +164,10 @@ jobs:
           docker tag "$image" "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
 
-      - name: Update Helm image tag
+      - name: Update Helm image repository and tag
         env:
           GITHUB_SHA: ${{ github.sha }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           python - <<'PY'
           import os
@@ -175,14 +176,47 @@ jobs:
 
           path = Path("helm/eks-production-platform/values.yaml")
           content = path.read_text(encoding="utf-8")
-          updated, count = re.subn(
-              r'(?m)^  tag: "[^"]+"$',
-              f'  tag: "{os.environ["GITHUB_SHA"]}"',
-              content,
-          )
-          if count != 1:
-              raise SystemExit(f"Expected to update one image tag, found {count}")
-          path.write_text(updated, encoding="utf-8")
+          updates = [
+              (
+                  r'(?m)^  repository: .+
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add helm/eks-production-platform/values.yaml
+
+          if git diff --cached --quiet; then
+            echo "Helm image tag already matches; no commit required."
+          else
+            git commit -m "chore: deploy image ${GITHUB_SHA} [skip ci]"
+            git push origin HEAD:main
+          fi
+,
+                  f'  repository: "{os.environ["ECR_REGISTRY"]}/eks-production-platform"',
+                  "image repository",
+              ),
+              (
+                  r'(?m)^  tag: "[^"]+"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add helm/eks-production-platform/values.yaml
+
+          if git diff --cached --quiet; then
+            echo "Helm image tag already matches; no commit required."
+          else
+            git commit -m "chore: deploy image ${GITHUB_SHA} [skip ci]"
+            git push origin HEAD:main
+          fi
+,
+                  f'  tag: "{os.environ["GITHUB_SHA"]}"',
+                  "image tag",
+              ),
+          ]
+          for pattern, replacement, label in updates:
+              content, count = re.subn(pattern, replacement, content, count=1)
+              if count != 1:
+                  raise SystemExit(f"Expected to update one {label}, found {count}")
+          path.write_text(content, encoding="utf-8")
           PY
 
           git config user.name "github-actions[bot]"
