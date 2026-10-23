@@ -1,14 +1,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: fastapi-app
+  name: {{ .Values.deployment.name }}
   labels:
-    app: fastapi-app
+    app: {{ .Values.deployment.name }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: fastapi-app
+    name: {{ .Values.deployment.name }}
   minReplicas: 2
   maxReplicas: 5
   behavior:
