@@ -61,7 +61,9 @@ The diagram shows the intended flow. Exact automation and deployment behavior de
 - kubectl installed
 - Helm installed
 - An EKS-compatible Kubernetes context when running cluster commands
+- A trusted public IP/CIDR to restrict access to the public EKS API endpoint
 - Argo CD installed and configured if you want to test the GitOps portion
+- Metrics Server installed in the cluster if you want the CPU-based HorizontalPodAutoscaler (HPA) to scale workloads
 
 Check the active AWS identity before provisioning:
 
@@ -74,9 +76,10 @@ aws configure list
 
 1. Read the Terraform files in `terraform/` and identify the resources, region, node sizing, and network configuration they create.
 2. Confirm the AWS account and region are the ones you intend to use.
-3. Check the Terraform plan for resource count and estimated cost implications.
-4. Verify image names, repository URLs, namespaces, and chart values before applying Kubernetes changes.
-5. Avoid committing AWS credentials, kubeconfig files, tokens, or other secrets.
+3. Decide which public IP/CIDR should be allowed to reach the Kubernetes API endpoint; do not open it to the whole internet.
+4. Check the Terraform plan for resource count and estimated cost implications. This configuration includes a NAT Gateway and three on-demand `t3.small` nodes by default, which can incur ongoing charges.
+5. Verify image names, repository URLs, namespaces, and chart values before applying Kubernetes changes.
+6. Avoid committing AWS credentials, kubeconfig files, tokens, or other secrets.
 
 ## Terraform workflow
 
@@ -84,13 +87,15 @@ Run from the Terraform directory:
 
 ```bash
 cd terraform
-terraform fmt -check
-terraform init
+terraform fmt -check -recursive
+terraform init -backend=false
 terraform validate
-terraform plan
+terraform plan -var='cluster_endpoint_public_access_cidrs=["YOUR_PUBLIC_IP/32"]'
 ```
 
-Review the plan carefully before applying it. Provisioning an EKS cluster, worker nodes, and networking resources can incur AWS charges.
+Replace `YOUR_PUBLIC_IP` with your own trusted public IPv4 address before planning. The CIDR variable is deliberately required and rejects the whole-internet ranges `0.0.0.0/0` and `::/0`. If you change `aws_region`, also provide two Availability Zones that exist in that region. The plan command above is an example for a single developer; adapt the CIDR list to your approved network.
+
+Review the plan carefully before applying it. Provisioning an EKS cluster, worker nodes, a NAT Gateway, and networking resources can incur AWS charges. The repository's Terraform checks validate configuration, not live AWS permissions, service quotas, or actual resource creation.
 
 `terraform apply` is intentionally not included as a copy-and-run command here: inspect and approve the plan for your own account first. When you finish experimenting, review the resources and destroy only the resources created for this lab.
 
@@ -143,7 +148,11 @@ The Argo CD Application manifest is at `argocd/application.yaml`. Before using i
 
 ## CI workflow
 
-The GitHub Actions workflow is `.github/workflows/ci.yml`. On pushes and pull requests targeting `main`, it installs dependencies, runs tests, and performs a Trivy filesystem scan. On a push to `main`, it also uses GitHub OIDC to assume the configured AWS IAM role, builds and pushes the application image to Amazon ECR, and commits the image tag update to the Helm values file. Review the workflow's role ARN, trust policy, IAM permissions, and repository permissions before using the pattern in another account. A workflow configuration alone does not prove that a hosted run passed; inspect the [Actions tab](https://github.com/nagateja-2002/eks-production-platform/actions) for the latest result.
+The GitHub Actions workflow is `.github/workflows/ci.yml`. Pushes and pull requests targeting `main` run application tests, a Trivy scan that fails on unfixed-excluded HIGH/CRITICAL findings, Terraform formatting/initialization/validation, and Helm lint/template checks.
+
+Image publishing is a separate opt-in job. Automatic publishing on a push requires the repository variable `ENABLE_ECR_PUBLISH` to be set to the string `true`; it then runs only when files under `app/` change on `main`. Manual publishing requires dispatching the workflow on `main`, selecting `publish_image=true`, and enabling the same variable. Configure the repository variable `AWS_ROLE_TO_ASSUME` with the intended IAM role ARN before enabling publishing.
+
+The latest inspected run failed at AWS credential configuration with `Not authorized to perform sts:AssumeRoleWithWebIdentity`; application tests and the Trivy step completed, but the image push did not run. Keep publishing disabled until the IAM OIDC provider, role trust policy, and ECR permissions are verified. GitHub's current OIDC guidance notes that newer repositories may use an immutable `sub` claim containing owner and repository IDs; the trust policy must match the subject claim actually issued for this repository. See the [GitHub OIDC guide](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws) and the [Actions tab](https://github.com/nagateja-2002/eks-production-platform/actions).
 
 ## Screenshots
 
@@ -171,8 +180,10 @@ The GitHub Actions workflow is `.github/workflows/ci.yml`. On pushes and pull re
 
 Use this checklist to record results from your own environment:
 
-- [ ] `terraform fmt -check` completed successfully
+- [ ] `terraform fmt -check -recursive` completed successfully
+- [ ] `terraform init -backend=false` completed successfully
 - [ ] `terraform validate` completed successfully
+- [ ] EKS public API CIDRs explicitly restricted to trusted IP ranges
 - [ ] Terraform plan reviewed for intended resources and cost
 - [ ] Application tests passed
 - [ ] Container image built successfully
