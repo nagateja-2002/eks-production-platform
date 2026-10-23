@@ -102,11 +102,16 @@ Inspect the application and tests in `app/`, then build and test locally:
 docker build -t eks-production-platform:local ./app
 ```
 
-Run the application tests using a Python environment with the dependencies from `app/requirements.txt` installed:
+Run the application tests from the `app/` directory, matching the workflow's working directory:
 
 ```bash
-python -m pytest app/tests -q
+cd app
+python -m pip install -r requirements.txt
+python -m pytest -q
+cd ..
 ```
+
+The tests import the local `app` package, so running from the repository's `app/` directory keeps the import path consistent with CI.
 
 Before applying manifests, verify the Kubernetes context:
 
@@ -138,7 +143,7 @@ The Argo CD Application manifest is at `argocd/application.yaml`. Before using i
 
 ## CI workflow
 
-The GitHub Actions workflow is `.github/workflows/ci.yml`. Review the workflow file to understand its triggers, checks, permissions, and image build/publish behavior. A workflow configuration in the repository alone does not prove that every hosted run is passing; inspect the [Actions tab](https://github.com/nagateja-2002/eks-production-platform/actions) for the latest result.
+The GitHub Actions workflow is `.github/workflows/ci.yml`. On pushes and pull requests targeting `main`, it installs dependencies, runs tests, and performs a Trivy filesystem scan. On a push to `main`, it also uses GitHub OIDC to assume the configured AWS IAM role, builds and pushes the application image to Amazon ECR, and commits the image tag update to the Helm values file. Review the workflow's role ARN, trust policy, IAM permissions, and repository permissions before using the pattern in another account. A workflow configuration alone does not prove that a hosted run passed; inspect the [Actions tab](https://github.com/nagateja-2002/eks-production-platform/actions) for the latest result.
 
 ## Screenshots
 
