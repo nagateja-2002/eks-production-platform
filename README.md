@@ -152,7 +152,15 @@ The GitHub Actions workflow is `.github/workflows/ci.yml`. Pushes and pull reque
 
 Image publishing is a separate opt-in job. Automatic publishing on a push requires the repository variable `ENABLE_ECR_PUBLISH` to be set to the string `true`; it then runs only when files under `app/` change on `main`. Manual publishing requires dispatching the workflow on `main`, selecting `publish_image=true`, and enabling the same variable. Configure the repository variable `AWS_ROLE_TO_ASSUME` with the intended IAM role ARN before enabling publishing.
 
-The latest inspected run failed at AWS credential configuration with `Not authorized to perform sts:AssumeRoleWithWebIdentity`; application tests and the Trivy step completed, but the image push did not run. Keep publishing disabled until the IAM OIDC provider, role trust policy, and ECR permissions are verified. GitHub's current OIDC guidance notes that newer repositories may use an immutable `sub` claim containing owner and repository IDs; the trust policy must match the subject claim actually issued for this repository. See the [GitHub OIDC guide](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws) and the [Actions tab](https://github.com/nagateja-2002/eks-production-platform/actions).
+The latest inspected run failed at AWS credential configuration with `Not authorized to perform sts:AssumeRoleWithWebIdentity`; application tests and the Trivy step completed, but the image push did not run. Keep publishing disabled until the IAM OIDC provider, role trust policy, and ECR permissions are verified.
+
+This repository was created on 6 September 2026. GitHub documents an immutable OIDC subject format for repositories created after 15 July 2026. The current GitHub metadata IDs are owner ID `259488259` and repository ID `1359044628`; **if this repository is using the immutable subject format**, the expected branch subject for `main` is:
+
+```text
+repo:nagateja-2002@259488259/eks-production-platform@1359044628:ref:refs/heads/main
+```
+
+Compare the actual subject format with the IAM role trust policy and ensure the audience condition is `sts.amazonaws.com`. The policy must allow `sts:AssumeRoleWithWebIdentity` for the correct GitHub OIDC provider, and the role needs only the ECR permissions and repository write permission required by the publish job. See the [GitHub OIDC guide](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws) and the [Actions tab](https://github.com/nagateja-2002/eks-production-platform/actions).
 
 ## Screenshots
 
