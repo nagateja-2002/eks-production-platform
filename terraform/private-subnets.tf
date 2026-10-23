@@ -4,10 +4,10 @@ resource "aws_subnet" "private_a" {
   availability_zone = var.availability_zones[0]
 
   tags = {
-    Name                                       = "${var.project_name}-private-a"
-    Project                                    = var.project_name
+    Name                                        = "${var.project_name}-private-a"
+    Project                                     = var.project_name
     "kubernetes.io/cluster/${var.project_name}" = "shared"
-    "kubernetes.io/role/internal-elb"          = "1"
+    "kubernetes.io/role/internal-elb"           = "1"
   }
 }
 
@@ -17,9 +17,9 @@ resource "aws_subnet" "private_b" {
   availability_zone = var.availability_zones[1]
 
   tags = {
-    Name                                       = "${var.project_name}-private-b"
-    Project                                    = var.project_name
+    Name                                        = "${var.project_name}-private-b"
+    Project                                     = var.project_name
     "kubernetes.io/cluster/${var.project_name}" = "shared"
-    "kubernetes.io/role/internal-elb"          = "1"
+    "kubernetes.io/role/internal-elb"           = "1"
   }
 }
