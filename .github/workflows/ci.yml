@@ -176,39 +176,17 @@ jobs:
 
           path = Path("helm/eks-production-platform/values.yaml")
           content = path.read_text(encoding="utf-8")
+          registry = os.environ["ECR_REGISTRY"]
+          sha = os.environ["GITHUB_SHA"]
           updates = [
               (
-                  r'(?m)^  repository: .+
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add helm/eks-production-platform/values.yaml
-
-          if git diff --cached --quiet; then
-            echo "Helm image tag already matches; no commit required."
-          else
-            git commit -m "chore: deploy image ${GITHUB_SHA} [skip ci]"
-            git push origin HEAD:main
-          fi
-,
-                  f'  repository: "{os.environ["ECR_REGISTRY"]}/eks-production-platform"',
+                  r'(?m)^  repository: .+$',
+                  '  repository: "' + registry + '/eks-production-platform"',
                   "image repository",
               ),
               (
-                  r'(?m)^  tag: "[^"]+"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add helm/eks-production-platform/values.yaml
-
-          if git diff --cached --quiet; then
-            echo "Helm image tag already matches; no commit required."
-          else
-            git commit -m "chore: deploy image ${GITHUB_SHA} [skip ci]"
-            git push origin HEAD:main
-          fi
-,
-                  f'  tag: "{os.environ["GITHUB_SHA"]}"',
+                  r'(?m)^  tag: "[^"]+"$',
+                  '  tag: "' + sha + '"',
                   "image tag",
               ),
           ]
@@ -224,7 +202,7 @@ jobs:
           git add helm/eks-production-platform/values.yaml
 
           if git diff --cached --quiet; then
-            echo "Helm image tag already matches; no commit required."
+            echo "Helm image repository and tag already match; no commit required."
           else
             git commit -m "chore: deploy image ${GITHUB_SHA} [skip ci]"
             git push origin HEAD:main
