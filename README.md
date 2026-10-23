@@ -163,7 +163,7 @@ This repository was created on 6 September 2026. GitHub documents an immutable O
 repo:nagateja-2002@259488259/eks-production-platform@1359044628:ref:refs/heads/main
 ```
 
-Compare this value with the subject claim emitted for your workflow and the IAM role trust policy, and ensure the audience condition is `sts.amazonaws.com`. The trust policy must allow `sts:AssumeRoleWithWebIdentity` for the correct GitHub OIDC provider. See the [AWS publishing setup guide](docs/aws-oidc-publishing-setup.md), the [GitHub OIDC guide](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws), and the [Actions tab](https://github.com/nagateja-2002/eks-production-platform/actions).
+Compare this value with the subject claim emitted for your workflow and the IAM role trust policy, and ensure the audience condition is `sts.amazonaws.com`. The trust policy must allow `sts:AssumeRoleWithWebIdentity` for the correct GitHub OIDC provider. The AWS role needs the ECR push permissions; the separate GitHub Actions token needs `contents: write` permission to commit the Helm tag. See the [AWS publishing setup guide](docs/aws-oidc-publishing-setup.md), the [GitHub OIDC guide](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws), and the [Actions tab](https://github.com/nagateja-2002/eks-production-platform/actions).
 
 ## Screenshots
 
